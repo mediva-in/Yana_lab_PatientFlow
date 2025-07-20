@@ -149,16 +149,7 @@ export function BookingConfirmationDialog({ isOpen, onClose, bookingData }: Book
             </div>
           </div>
 
-          {/* Important Notes */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <h4 className="font-medium text-blue-900 text-sm mb-2">Important Information</h4>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• Please arrive 10 minutes before your appointment time</li>
-              <li>• Bring a valid ID proof and any previous reports</li>
-              <li>• Fasting may be required for certain scans (we'll inform you)</li>
-              <li>• Call us if you need to reschedule or cancel</li>
-            </ul>
-          </div>
+
 
           {/* Contact Information */}
           <div className="bg-gray-50 rounded-lg p-3">

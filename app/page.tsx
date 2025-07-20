@@ -1,6 +1,7 @@
 "use client"
 
 import { createBooking, getBookedSlots } from "@/app/actions"; // Import the server actions
+import { BookingConfirmationDialog } from "@/components/booking-confirmation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,6 +94,9 @@ export default function YanaLabsBooking() {
   const [isSubmitting, setIsSubmitting] = useState(false) // New state for submission loading
   const [bookedSlots, setBookedSlots] = useState<string[]>([]) // State for booked slots
   const [loadingSlots, setLoadingSlots] = useState(false) // State for loading slots
+  const [showConfirmation, setShowConfirmation] = useState(false) // State for confirmation dialog
+  const [bookingId, setBookingId] = useState<string>("") // State for booking ID
+  const [bookingDataForDialog, setBookingDataForDialog] = useState<any>(null) // State for booking data in dialog
   const { toast } = useToast() // Initialize toast
 
   const [formData, setFormData] = useState<FormData>({
@@ -284,15 +288,56 @@ export default function YanaLabsBooking() {
     setIsSubmitting(true)
     try {
       const result = await createBooking(formData)
+   
       if (result.success) {
+        console.log("the result da"+result.message)
         toast({
-          title: "Success!",
+          title: "🎉 Booking Successful!",
           description: result.message,
           variant: "default",
+          duration: 5000, // Show for 5 seconds
         })
-        // Optionally reset form or navigate
-        // setFormData(...)
-        // setCurrentStep(1)
+        
+        // Store booking data before resetting form
+        const bookingDataForDialog = {
+          patientType: formData.patientType,
+          patientName: formData.patientName,
+          age: formData.age,
+          phoneNumber: formData.phoneNumber,
+          emailAddress: formData.emailAddress,
+          gender: formData.gender,
+          selectedScans: formData.selectedScans,
+          selectedDate: formData.selectedDate,
+          selectedTime: formData.selectedTime,
+          bookingId: result.bookingId || "",
+        }
+        setBookingDataForDialog(bookingDataForDialog)
+        
+        if (result.bookingId) {
+          setBookingId(result.bookingId)
+        }
+        // Show confirmation dialog
+        setShowConfirmation(true)
+        
+        // Reset form after successful booking
+        setFormData({
+          patientType: "new",
+          patientName: "",
+          age: "",
+          phoneNumber: "",
+          emailAddress: "",
+          gender: "",
+          howDidYouHear: "",
+          couponCode: "",
+          referrer: "",
+          otp: "",
+          selectedScans: [],
+          selectedDate: "",
+          selectedTime: "",
+        })
+        setCurrentStep(1)
+        setShowOTP(false)
+        setBookedSlots([])
       } else {
         toast({
           title: "Error",
@@ -520,8 +565,6 @@ export default function YanaLabsBooking() {
           {/* Step 2: Select Scan */}
           {currentStep === 2 && (
             <div className="space-y-4">
-              <DiscountBanner />
-
               <div className="text-center text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-3">
                 Don't know which scan you need?{" "}
                 <a href="tel:+919900500950" className="text-green-600 hover:text-green-700 font-medium">
@@ -586,7 +629,16 @@ export default function YanaLabsBooking() {
                   ← Back
                 </Button>
                 <Button
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => {
+                    setCurrentStep(3)
+                    // Show success toast for completing scan selection
+                    toast({
+                      title: "✅ Scans Selected!",
+                      description: `${formData.selectedScans.length} scan(s) selected. Now choose your appointment time.`,
+                      variant: "default",
+                      duration: 3000,
+                    })
+                  }}
                   disabled={!isStep2Valid()}
                   className="flex-1 bg-green-500 hover:bg-green-600"
                 >
@@ -599,8 +651,6 @@ export default function YanaLabsBooking() {
           {/* Step 3: Confirm Slot */}
           {currentStep === 3 && (
             <div className="space-y-4">
-              <DiscountBanner />
-
               {/* Selected Scans Summary */}
               <Card>
                 <CardHeader>
@@ -628,6 +678,13 @@ export default function YanaLabsBooking() {
                         updateFormData("selectedDate", date)
                         updateFormData("selectedTime", "") // Clear selected time when date changes
                         fetchBookedSlots(date) // Fetch booked slots for selected date
+                        // Show success toast for date selection
+                        toast({
+                          title: "📅 Date Selected!",
+                          description: `Appointment date set for ${formatDate(date)}. Now choose your preferred time.`,
+                          variant: "default",
+                          duration: 3000,
+                        })
                       }}
                       className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
                         formData.selectedDate === date
@@ -666,7 +723,18 @@ export default function YanaLabsBooking() {
                               return (
                                 <button
                                   key={time}
-                                  onClick={() => !isBooked && updateFormData("selectedTime", time)}
+                                  onClick={() => {
+                                    if (!isBooked) {
+                                      updateFormData("selectedTime", time)
+                                      // Show success toast for time selection
+                                      toast({
+                                        title: "⏰ Time Selected!",
+                                        description: `Appointment time set for ${time}. Ready to confirm your booking!`,
+                                        variant: "default",
+                                        duration: 3000,
+                                      })
+                                    }
+                                  }}
                                   disabled={isBooked}
                                   className={`p-2 rounded-lg border text-xs font-medium transition-colors ${
                                     isBooked
@@ -713,6 +781,18 @@ export default function YanaLabsBooking() {
           )}
         </div>
       </div>
+
+      {/* Booking Confirmation Dialog */}
+      {bookingDataForDialog && (
+        <BookingConfirmationDialog
+          isOpen={showConfirmation}
+          onClose={() => {
+            setShowConfirmation(false)
+            setBookingDataForDialog(null) // Clear the booking data when dialog closes
+          }}
+          bookingData={bookingDataForDialog}
+        />
+      )}
     </div>
   )
 }
