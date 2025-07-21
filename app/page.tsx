@@ -526,19 +526,10 @@ export default function YanaLabsBooking() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-md mx-auto bg-white min-h-screen">
+    <div className="min-h-screen w-full bg-gray-50">
+      <div className="w-full pt-[2rem] px-[0.4rem] sm:px-[4rem] md:px-[6rem] bg-white min-h-screen">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/yana-logo.png"
-              alt="Yana Labs"
-              width={200}
-              height={80}
-              className="h-16 w-auto"
-            />
-          </div>
           <DiscountBanner />
           <StepIndicator />
         </div>
@@ -841,8 +832,6 @@ export default function YanaLabsBooking() {
               >
                 Select scan →
               </Button>
-
-              <ContactInfo />
             </div>
           )}
 
