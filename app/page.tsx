@@ -88,9 +88,7 @@ const timeSlotsByPeriod = {
 }
 
 // API Configuration
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://api.mediva.com' 
-  : 'http://localhost:8080'
+const API_BASE_URL = process.env.NEXT_PUBLIC_MEDIVA_API_URL || 'http://localhost:8080'
 
 // Add the API types based on the OpenAPI specification
 interface CreateBookingRequest {
@@ -368,7 +366,12 @@ export default function YanaLabsBooking() {
         referrer: formData.referrer || undefined,
         selectedScans: formData.selectedScans,
         selectedDate: formData.selectedDate,
-        selectedTime: formData.selectedTime,
+        selectedTime: new Date().toLocaleTimeString('en-GB', { 
+          hour: '2-digit', 
+          minute: '2-digit', 
+          hour12: false,
+          timeZone: 'Asia/Kolkata'
+        }), // Use current time in Indian timezone (IST) HH:MM format
       }
 
       // Call Mediva API directly
