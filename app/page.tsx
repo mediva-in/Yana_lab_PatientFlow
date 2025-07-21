@@ -1,8 +1,6 @@
 "use client"
 
-import { createBooking, getBookedSlots } from "@/app/actions"; // Import the server actions
 import { BookingConfirmationDialog } from "@/components/booking-confirmation-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast"; // Import useToast for feedback
+// Remove the mediva client import and add direct API types
+import { getTestPrice, scanCategories as pricingData } from "@/lib/pricing-data";
 import { Calendar, Clock, MapPin, Phone, Search } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -33,11 +33,11 @@ interface FormData {
   selectedTime: string
 }
 
-const scanCategories = {
-  "X-ray": ["Chest X-ray", "Spine X-ray", "Joint X-ray", "Dental X-ray"],
-  Ultrasound: ["Abdomen", "Pelvis", "Thyroid", "Pregnancy", "Heart"],
-  ECG: ["Standard ECG", "24-hour Holter", "Stress ECG"],
-}
+// Transform pricing data to match the expected format for the UI
+const scanCategories = Object.entries(pricingData).reduce((acc, [categoryName, category]) => {
+  acc[categoryName] = category.tests.map(test => test.name);
+  return acc;
+}, {} as Record<string, string[]>);
 
 const timeSlotsByPeriod = {
   Morning: ["09:00", "09:15", "09:30", "09:45", "10:00", "10:15", "10:30", "10:45", "11:00", "11:15", "11:30", "11:45"],
@@ -87,6 +87,56 @@ const timeSlotsByPeriod = {
   ],
 }
 
+// API Configuration
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? 'https://api.mediva.com' 
+  : 'http://localhost:8080'
+
+// Add the API types based on the OpenAPI specification
+interface CreateBookingRequest {
+  patientType: "new" | "existing"
+  patientName?: string
+  age?: string
+  phoneNumber: string
+  emailAddress?: string
+  gender?: "male" | "female" | "other"
+  howDidYouHear?: string
+  couponCode?: string
+  referrer?: string
+  selectedScans: string[]
+  selectedDate: string
+  selectedTime: string
+}
+
+interface CreateBookingResponse {
+  success: boolean
+  message: string
+  bookingId: string
+  booking?: {
+    id: string
+    created_at: string
+    patient_type: string
+    patient_name?: string
+    age?: string
+    phone_number: string
+    email_address?: string
+    gender?: string
+    how_did_you_hear?: string
+    coupon_code?: string
+    referrer?: string
+    selected_scans: string[]
+    selected_date: string
+    selected_time: string
+  }
+}
+
+interface ErrorResponse {
+  success: boolean
+  message: string
+  error?: string
+  details?: Record<string, any>
+}
+
 export default function YanaLabsBooking() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
   const [showOTP, setShowOTP] = useState(false)
@@ -124,17 +174,27 @@ export default function YanaLabsBooking() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     const phoneRegex = /^\d{10}$/
 
-    if (formData.patientType === "new") {
-      return (
-        formData.patientName &&
-        formData.age &&
-        phoneRegex.test(formData.phoneNumber) &&
-        emailRegex.test(formData.emailAddress) &&
-        formData.gender
-      )
-    } else {
-      return phoneRegex.test(formData.phoneNumber) && showOTP && formData.otp.length === 6
-    }
+    // Only validating new patient fields for now
+    return (
+      formData.patientName &&
+      formData.age &&
+      phoneRegex.test(formData.phoneNumber) &&
+      emailRegex.test(formData.emailAddress) &&
+      formData.gender
+    )
+
+    // Commented out existing patient validation logic for now
+    // if (formData.patientType === "new") {
+    //   return (
+    //     formData.patientName &&
+    //     formData.age &&
+    //     phoneRegex.test(formData.phoneNumber) &&
+    //     emailRegex.test(formData.emailAddress) &&
+    //     formData.gender
+    //   )
+    // } else {
+    //   return phoneRegex.test(formData.phoneNumber) && showOTP && formData.otp.length === 6
+    // }
   }
 
   const isStep2Valid = () => {
@@ -265,13 +325,9 @@ export default function YanaLabsBooking() {
   const fetchBookedSlots = async (date: string) => {
     setLoadingSlots(true)
     try {
-      const result = await getBookedSlots(date)
-      if (result.success) {
-        setBookedSlots(result.bookedSlots)
-      } else {
-        console.error("Failed to fetch booked slots:", result.message)
-        setBookedSlots([])
-      }
+      // For now, return empty array since Mediva API doesn't have a getBookedSlots endpoint
+      // This can be implemented later when the backend provides this functionality
+      setBookedSlots([])
     } catch (error) {
       console.error("Error fetching booked slots:", error)
       setBookedSlots([])
@@ -287,10 +343,47 @@ export default function YanaLabsBooking() {
   const handleConfirmAppointment = async () => {
     setIsSubmitting(true)
     try {
-      const result = await createBooking(formData)
+      console.log("Submitting booking data:", formData)
+      
+      // Validate required fields
+      if (!formData.phoneNumber || !formData.selectedScans.length || !formData.selectedDate || !formData.selectedTime) {
+        throw new Error("Missing required fields")
+      }
+
+      // Validate patient type specific fields - only new patient for now
+      if (!formData.patientName || !formData.age || !formData.emailAddress || !formData.gender) {
+        throw new Error("Missing required fields for new patient")
+      }
+
+      // Transform data to match Mediva API format
+      const medivaBookingData: CreateBookingRequest = {
+        patientType: "new", // Always set to new for now
+        patientName: formData.patientName,
+        age: formData.age,
+        phoneNumber: formData.phoneNumber,
+        emailAddress: formData.emailAddress,
+        gender: formData.gender as "male" | "female" | "other",
+        howDidYouHear: formData.howDidYouHear || undefined,
+        couponCode: formData.couponCode || undefined,
+        referrer: formData.referrer || undefined,
+        selectedScans: formData.selectedScans,
+        selectedDate: formData.selectedDate,
+        selectedTime: formData.selectedTime,
+      }
+
+      // Call Mediva API directly
+      const response = await fetch(`${API_BASE_URL}/patient/createBooking`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(medivaBookingData),
+      })
+
+      const result: CreateBookingResponse | ErrorResponse = await response.json()
    
-      if (result.success) {
-        console.log("the result da"+result.message)
+      if (response.ok && 'success' in result && result.success) {
+        console.log("✅ Booking successful:", result)
         toast({
           title: "🎉 Booking Successful!",
           description: result.message,
@@ -309,12 +402,12 @@ export default function YanaLabsBooking() {
           selectedScans: formData.selectedScans,
           selectedDate: formData.selectedDate,
           selectedTime: formData.selectedTime,
-          bookingId: result.bookingId || "",
+          bookingId: (result as CreateBookingResponse).bookingId || "",
         }
         setBookingDataForDialog(bookingDataForDialog)
         
-        if (result.bookingId) {
-          setBookingId(result.bookingId)
+        if ((result as CreateBookingResponse).bookingId) {
+          setBookingId((result as CreateBookingResponse).bookingId)
         }
         // Show confirmation dialog
         setShowConfirmation(true)
@@ -339,17 +432,29 @@ export default function YanaLabsBooking() {
         setShowOTP(false)
         setBookedSlots([])
       } else {
+        console.log("❌ Booking failed:", result.message)
+        const errorMessage = 'message' in result ? result.message : "Failed to confirm appointment."
         toast({
           title: "Error",
-          description: result.message || "Failed to confirm appointment.",
+          description: errorMessage,
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("Failed to submit booking:", error)
+      console.error("❌ Failed to submit booking:", error)
+      let errorMessage = "An unexpected error occurred. Please try again."
+      
+      if (error instanceof Error) {
+        if (error.message.includes('fetch')) {
+          errorMessage = "Network error. Please check your internet connection and try again."
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "An unexpected error occurred. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -374,8 +479,8 @@ export default function YanaLabsBooking() {
           {/* Step 1: Fill Details */}
           {currentStep === 1 && (
             <div className="space-y-4">
-              {/* Patient Type Toggle */}
-              <div className="flex rounded-lg border border-gray-200 p-1">
+              {/* Patient Type Toggle - Commented out existing patient option for now */}
+              {/* <div className="flex rounded-lg border border-gray-200 p-1">
                 <button
                   onClick={() => handlePatientTypeChange("new")}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -394,10 +499,100 @@ export default function YanaLabsBooking() {
                 >
                   Existing patient
                 </button>
+              </div> */}
+
+              {/* Form Fields - Only showing new patient form for now */}
+              <div className="space-y-4">
+                <div>
+                  <Input
+                    placeholder="Patient name *"
+                    value={formData.patientName}
+                    onChange={(e) => updateFormData("patientName", e.target.value)}
+                    className="text-black"
+                  />
+                </div>
+                <div>
+                  <Input
+                    placeholder="Age *"
+                    type="number"
+                    value={formData.age}
+                    onChange={(e) => updateFormData("age", e.target.value)}
+                    className="text-black"
+                  />
+                </div>
+                <div>
+                  <Input
+                    placeholder="Phone number *"
+                    type="tel"
+                    value={formData.phoneNumber}
+                    onChange={(e) => updateFormData("phoneNumber", e.target.value)}
+                    className="text-black"
+                    maxLength={10}
+                  />
+                  {formData.phoneNumber && !/^\d{10}$/.test(formData.phoneNumber) && (
+                    <p className="text-red-500 text-xs mt-1">Please enter a valid 10-digit phone number</p>
+                  )}
+                </div>
+                <div>
+                  <Input
+                    placeholder="Email address *"
+                    type="email"
+                    value={formData.emailAddress}
+                    onChange={(e) => updateFormData("emailAddress", e.target.value)}
+                    className="text-black"
+                  />
+                  {formData.emailAddress && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.emailAddress) && (
+                    <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>
+                  )}
+                </div>
+                <div>
+                  <Select value={formData.gender} onValueChange={(value) => updateFormData("gender", value)}>
+                    <SelectTrigger className="text-gray-500">
+                      <SelectValue placeholder="Gender *" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Select
+                    value={formData.howDidYouHear}
+                    onValueChange={(value) => updateFormData("howDidYouHear", value)}
+                  >
+                    <SelectTrigger className="text-gray-500">
+                      <SelectValue placeholder="How did you hear about us? (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="google">Google</SelectItem>
+                      <SelectItem value="social-media">Social Media</SelectItem>
+                      <SelectItem value="friend">From a Friend</SelectItem>
+                      <SelectItem value="doctor">From a Doctor</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Input
+                    placeholder="Coupon code (optional)"
+                    value={formData.couponCode}
+                    onChange={(e) => updateFormData("couponCode", e.target.value)}
+                    className="text-black"
+                  />
+                </div>
+                <div>
+                  <Input
+                    placeholder="Referrer (optional)"
+                    value={formData.referrer}
+                    onChange={(e) => updateFormData("referrer", e.target.value)}
+                    className="text-black"
+                  />
+                </div>
               </div>
 
-              {/* Form Fields */}
-              {formData.patientType === "new" ? (
+              {/* Commented out existing patient form logic for now */}
+              {/* {formData.patientType === "new" ? (
                 <div className="space-y-4">
                   <div>
                     <Input
@@ -537,7 +732,7 @@ export default function YanaLabsBooking() {
                     />
                   </div>
                 </div>
-              )}
+              )} */}
 
               <Button
                 onClick={() => {
@@ -545,9 +740,7 @@ export default function YanaLabsBooking() {
                   // Show success toast for completing patient details
                   toast({
                     title: "✅ Patient Details Saved!",
-                    description: formData.patientType === "new" 
-                      ? "Patient information has been saved successfully. Now select your scans."
-                      : "Phone verification completed. Now select your scans.",
+                    description: "Patient information has been saved successfully. Now select your scans.",
                     variant: "default",
                     duration: 3000,
                   })
@@ -590,18 +783,28 @@ export default function YanaLabsBooking() {
                   <div key={category}>
                     <h3 className="font-semibold text-gray-900 mb-3">{category}</h3>
                     <div className="space-y-2">
-                      {scans.map((scan) => (
-                        <div key={scan} className="flex items-center space-x-3">
-                          <Checkbox
-                            id={scan}
-                            checked={formData.selectedScans.includes(scan)}
-                            onCheckedChange={() => handleScanToggle(scan)}
-                          />
-                          <Label htmlFor={scan} className="text-sm text-gray-700">
-                            {scan}
-                          </Label>
-                        </div>
-                      ))}
+                      {scans.map((scan) => {
+                        const price = getTestPrice(scan);
+                        return (
+                          <div key={scan} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                            <div className="flex items-center space-x-3">
+                              <Checkbox
+                                id={scan}
+                                checked={formData.selectedScans.includes(scan)}
+                                onCheckedChange={() => handleScanToggle(scan)}
+                              />
+                              <Label htmlFor={scan} className="text-sm text-gray-700 font-medium">
+                                {scan}
+                              </Label>
+                            </div>
+                            {price && (
+                              <span className="text-sm font-semibold text-green-600">
+                                ₹{price.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -610,12 +813,31 @@ export default function YanaLabsBooking() {
               {formData.selectedScans.length > 0 && (
                 <div className="mt-4">
                   <h4 className="font-medium text-gray-900 mb-2">Selected Scans:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.selectedScans.map((scan) => (
-                      <Badge key={scan} variant="secondary" className="bg-green-100 text-green-800">
-                        {scan}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    {formData.selectedScans.map((scan) => {
+                      const price = getTestPrice(scan);
+                      return (
+                        <div key={scan} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                          <span className="text-sm font-medium text-green-800">{scan}</span>
+                          {price && (
+                            <span className="text-sm font-semibold text-green-600">
+                              ₹{price.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-900">Total:</span>
+                      <span className="font-bold text-lg text-green-600">
+                        ₹{formData.selectedScans.reduce((total, scan) => {
+                          const price = getTestPrice(scan);
+                          return total + (price || 0);
+                        }, 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -657,12 +879,31 @@ export default function YanaLabsBooking() {
                   <CardTitle className="text-lg">Selected Scans</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.selectedScans.map((scan) => (
-                      <Badge key={scan} variant="secondary" className="bg-green-100 text-green-800">
-                        {scan}
-                      </Badge>
-                    ))}
+                  <div className="space-y-2">
+                    {formData.selectedScans.map((scan) => {
+                      const price = getTestPrice(scan);
+                      return (
+                        <div key={scan} className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                          <span className="text-sm font-medium text-green-800">{scan}</span>
+                          {price && (
+                            <span className="text-sm font-semibold text-green-600">
+                              ₹{price.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 pt-3 border-t border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-gray-900">Total Amount:</span>
+                      <span className="font-bold text-lg text-green-600">
+                        ₹{formData.selectedScans.reduce((total, scan) => {
+                          const price = getTestPrice(scan);
+                          return total + (price || 0);
+                        }, 0).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

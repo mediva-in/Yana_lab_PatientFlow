@@ -1,0 +1,119 @@
+// Mediva Patient Booking API Client
+"use client";
+
+const MEDIVA_API_BASE_URL = 'http://localhost:8080'
+
+// Updated request format to match new OpenAPI spec
+export interface CreateBookingRequest {
+  patientId?: string
+  reason: "PATIENT_NOT_READY" | "RESCHEDULED" | "TECHNICAL_ISSUE" | "OTHER"
+  notes?: string
+  name: string
+  phone: string
+  age: number
+  gender: "MALE" | "FEMALE" | "OTHER"
+  doctor: "DOCUBE" | "OTHER"
+  consultationType: "ECHO" | "ULTRASOUND" | "BOTH"
+  originalStartTime?: string
+  tokenNumber?: number
+  originalPosition?: number
+}
+
+// Updated response format to match new OpenAPI spec
+export interface CreateBookingResponse {
+  success: boolean
+  patient: NotCheckedInPatientEntry
+  movedAt: string
+  message: string
+  originalPosition?: number
+}
+
+export interface NotCheckedInPatientEntry {
+  patientId?: string
+  name?: string
+  phone?: string
+  age?: number
+  gender?: "MALE" | "FEMALE" | "OTHER"
+  doctor?: "DOCUBE" | "OTHER"
+  consultationType?: "ECHO" | "ULTRASOUND" | "BOTH"
+  originalStartTime?: string
+  movedToNotCheckedInAt?: string
+  reason?: "PATIENT_NOT_READY" | "RESCHEDULED" | "TECHNICAL_ISSUE" | "OTHER"
+  notes?: string
+  tokenNumber?: number
+  originalPosition?: number
+}
+
+export interface PatientTokenStatusResponse {
+  position: string
+  currentTime: string
+  tokenNumber: string
+}
+
+export interface ErrorResponse {
+  success: boolean
+  message: string
+  error?: string
+  details?: Record<string, any>
+}
+
+class MedivaApiClient {
+  private baseUrl: string
+
+  constructor(baseUrl: string = MEDIVA_API_BASE_URL) {
+    this.baseUrl = baseUrl
+  }
+
+  private async makeRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`
+    
+    const defaultHeaders = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    }
+
+    const config: RequestInit = {
+      ...options,
+      headers: defaultHeaders,
+    }
+
+    try {
+      const response = await fetch(url, config)
+      
+      if (!response.ok) {
+        const errorData: ErrorResponse = await response.json().catch(() => ({
+          success: false,
+          message: `HTTP ${response.status}: ${response.statusText}`,
+        }))
+        
+        throw new Error(errorData.message || `HTTP ${response.status}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Network error occurred')
+    }
+  }
+
+  async createBooking(data: CreateBookingRequest): Promise<CreateBookingResponse> {
+    return this.makeRequest<CreateBookingResponse>('/patient/createBooking', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getPatientTokenStatus(patientId: string, terminalId: number): Promise<PatientTokenStatusResponse> {
+    return this.makeRequest<PatientTokenStatusResponse>(
+      `/patient/getTokenStatus/${patientId}?terminalId=${terminalId}`
+    )
+  }
+}
+
+// Export singleton instance
+export const medivaApiClient = new MedivaApiClient() 

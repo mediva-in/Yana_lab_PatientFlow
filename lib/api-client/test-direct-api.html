@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Direct API Call</title>
+</head>
+<body>
+    <h1>Test Direct API Call to Mediva</h1>
+    <button onclick="testAPI()">Test API Call</button>
+    <div id="result"></div>
+
+    <script>
+        async function testAPI() {
+            const testData = {
+                patientType: "new",
+                patientName: "John Doe",
+                age: "30",
+                phoneNumber: "1234567890",
+                emailAddress: "john.doe@example.com",
+                gender: "male",
+                howDidYouHear: "Social Media",
+                couponCode: "WELCOME10",
+                referrer: "Dr. Smith",
+                selectedScans: ["Chest X-ray", "Abdomen Ultrasound"],
+                selectedDate: "2024-01-15",
+                selectedTime: "10:30"
+            };
+
+            try {
+                console.log('Testing direct API call to:', 'http://localhost:8080/patient/createBooking');
+                console.log('Request data:', testData);
+
+                const response = await fetch('http://localhost:8080/patient/createBooking', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Error response:', errorText);
+                    document.getElementById('result').innerHTML = `
+                        <h3>❌ Error (${response.status})</h3>
+                        <pre>${errorText}</pre>
+                    `;
+                    return;
+                }
+
+                const result = await response.json();
+                console.log('Success response:', result);
+                document.getElementById('result').innerHTML = `
+                    <h3>✅ Success!</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+            } catch (error) {
+                console.error('Network error:', error);
+                document.getElementById('result').innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 
