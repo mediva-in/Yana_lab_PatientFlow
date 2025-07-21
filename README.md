@@ -11,7 +11,7 @@ A modern booking system for medical diagnostic services built with Next.js, Type
 - Prevention of double bookings with visual feedback
 - Supabase database integration
 - Responsive design
-- Toast notifications for user feedback
+- Toast notifications for user feedback 
 - Admin panel for booking management
 - Professional medical-themed favicon and branding
 - PWA-ready configuration
