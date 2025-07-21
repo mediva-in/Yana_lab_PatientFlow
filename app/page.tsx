@@ -1164,8 +1164,6 @@ export default function YanaLabsBooking() {
                   {isSubmitting ? "Confirming..." : "Confirm Appointment"}
                 </Button>
               </div>
-
-              <ContactInfo />
             </div>
           )}
         </div>
