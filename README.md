@@ -7,7 +7,7 @@ A modern booking system for medical diagnostic services built with Next.js, Type
 - Multi-step booking form for new and existing patients
 - Real-time form validation 
 - Scan selection with search functionality
-- Date and time slot selection with availability checking
+- Date and time slot selection with availability checking 
 - Prevention of double bookings with visual feedback
 - Supabase database integration
 - Responsive design
