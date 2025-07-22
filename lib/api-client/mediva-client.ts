@@ -1,7 +1,7 @@
 // Mediva Patient Booking API Client
 "use client";
 
-const MEDIVA_API_BASE_URL = "http://localhost:8080";
+const MEDIVA_API_BASE_URL = "https://api.mediva.in";
 
 // Updated request format to match new OpenAPI spec
 export interface CreateBookingRequest {
