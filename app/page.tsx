@@ -19,6 +19,7 @@ import {
   getTestPrice,
   fetchScanCategories,
   fallbackScanCategories,
+  getDisplayNameWithCategory,
   type ScanCategory,
 } from "@/lib/pricing-data";
 import { Calendar, Clock, MapPin, Phone, Search } from "lucide-react";
@@ -185,6 +186,11 @@ export default function YanaLabsBooking() {
   >({});
   const [isLoadingScans, setIsLoadingScans] = useState(true);
 
+  // State for managing scan display limits
+  const [scanDisplayLimits, setScanDisplayLimits] = useState<
+    Record<string, number>
+  >({});
+
   // Transform scan categories to match the expected format for the UI
   const scanCategoriesForUI = transformScanCategoriesForUI(scanCategories);
 
@@ -226,6 +232,11 @@ export default function YanaLabsBooking() {
     loadScanCategories();
   }, []);
 
+  // Reset scan display limits when search term changes
+  useEffect(() => {
+    setScanDisplayLimits({});
+  }, [searchTerm]);
+
   const updateFormData = (field: keyof FormData, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -242,19 +253,6 @@ export default function YanaLabsBooking() {
       emailRegex.test(formData.emailAddress) &&
       formData.gender
     );
-
-    // Commented out existing patient validation logic for now
-    // if (formData.patientType === "new") {
-    //   return (
-    //     formData.patientName &&
-    //     formData.age &&
-    //     phoneRegex.test(formData.phoneNumber) &&
-    //     emailRegex.test(formData.emailAddress) &&
-    //     formData.gender
-    //   )
-    // } else {
-    //   return phoneRegex.test(formData.phoneNumber) && showOTP && formData.otp.length === 6
-    // }
   };
 
   const isStep2Valid = () => {
@@ -266,6 +264,23 @@ export default function YanaLabsBooking() {
       ? formData.selectedScans.filter((s) => s !== scan)
       : [...formData.selectedScans, scan];
     updateFormData("selectedScans", updatedScans);
+  };
+
+  const handleShowMoreScans = (category: string) => {
+    setScanDisplayLimits((prev) => ({
+      ...prev,
+      [category]: (prev[category] || 10) + 10,
+    }));
+  };
+
+  const getScansToShow = (category: string, scans: string[]) => {
+    const limit = scanDisplayLimits[category] || 10;
+    return scans.slice(0, limit);
+  };
+
+  const hasMoreScans = (category: string, scans: string[]) => {
+    const limit = scanDisplayLimits[category] || 10;
+    return scans.length > limit;
   };
 
   const filteredScans = Object.entries(scanCategoriesForUI).reduce(
@@ -910,45 +925,73 @@ export default function YanaLabsBooking() {
                     </p>
                   </div>
                 ) : (
-                  Object.entries(filteredScans).map(([category, scans]) => (
-                    <div key={category}>
-                      <h3 className="font-semibold text-gray-900 mb-3">
-                        {category}
-                      </h3>
-                      <div className="space-y-2">
-                        {scans.map((scan) => {
-                          const price = getTestPrice(scan, scanCategories);
-                          return (
-                            <div
-                              key={scan}
-                              className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                            >
-                              <div className="flex items-center space-x-3">
-                                <Checkbox
-                                  id={scan}
-                                  checked={formData.selectedScans.includes(
-                                    scan
-                                  )}
-                                  onCheckedChange={() => handleScanToggle(scan)}
-                                />
-                                <Label
-                                  htmlFor={scan}
-                                  className="text-sm text-gray-700 font-medium"
-                                >
-                                  {scan}
-                                </Label>
+                  Object.entries(filteredScans).map(([category, scans]) => {
+                    const scansToShow = getScansToShow(category, scans);
+                    const showMore = hasMoreScans(category, scans);
+
+                    return (
+                      <div key={category}>
+                        <h3 className="font-semibold text-gray-900 mb-3">
+                          {category} ({scans.length} scans)
+                        </h3>
+                        <div className="space-y-2">
+                          {scansToShow.map((scan) => {
+                            const price = getTestPrice(scan, scanCategories);
+                            return (
+                              <div
+                                key={scan}
+                                className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <Checkbox
+                                    id={scan}
+                                    checked={formData.selectedScans.includes(
+                                      scan
+                                    )}
+                                    onCheckedChange={() =>
+                                      handleScanToggle(scan)
+                                    }
+                                  />
+                                  <Label
+                                    htmlFor={scan}
+                                    className="text-sm text-gray-700 font-medium"
+                                  >
+                                    {getDisplayNameWithCategory(
+                                      scan,
+                                      scanCategories
+                                    )}
+                                  </Label>
+                                </div>
+                                {price && (
+                                  <span className="text-sm font-semibold text-green-600">
+                                    ₹{price.toLocaleString()}
+                                  </span>
+                                )}
                               </div>
-                              {price && (
-                                <span className="text-sm font-semibold text-green-600">
-                                  ₹{price.toLocaleString()}
-                                </span>
+                            );
+                          })}
+                        </div>
+                        {showMore && (
+                          <div className="mt-3">
+                            <Button
+                              onClick={() => handleShowMoreScans(category)}
+                              variant="outline"
+                              size="sm"
+                              className="w-full border-green-500 text-green-600 hover:bg-green-50"
+                            >
+                              Show More (+
+                              {Math.min(
+                                10,
+                                scans.length -
+                                  (scanDisplayLimits[category] || 10)
                               )}
-                            </div>
-                          );
-                        })}
+                              )
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
@@ -966,7 +1009,7 @@ export default function YanaLabsBooking() {
                           className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg"
                         >
                           <span className="text-sm font-medium text-green-800">
-                            {scan}
+                            {getDisplayNameWithCategory(scan, scanCategories)}
                           </span>
                           {price && (
                             <span className="text-sm font-semibold text-green-600">
@@ -1042,7 +1085,7 @@ export default function YanaLabsBooking() {
                           className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg"
                         >
                           <span className="text-sm font-medium text-green-800">
-                            {scan}
+                            {getDisplayNameWithCategory(scan, scanCategories)}
                           </span>
                           {price && (
                             <span className="text-sm font-semibold text-green-600">
@@ -1229,6 +1272,7 @@ export default function YanaLabsBooking() {
             setBookingDataForDialog(null); // Clear the booking data when dialog closes
           }}
           bookingData={bookingDataForDialog}
+          scanCategories={scanCategories}
         />
       )}
     </div>

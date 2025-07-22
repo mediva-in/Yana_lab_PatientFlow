@@ -1,7 +1,8 @@
 // Mediva Patient Booking API Client
 "use client";
 
-const MEDIVA_API_BASE_URL = "https://api.mediva.in";
+const MEDIVA_API_BASE_URL =
+  process.env.NEXT_PUBLIC_MEDIVA_API_URL || "http://localhost:8080";
 
 // Updated request format to match new OpenAPI spec
 export interface CreateBookingRequest {
@@ -61,6 +62,7 @@ export interface ErrorResponse {
 export interface Service {
   scanName: string;
   scanPrice: number;
+  scanCategory: string;
 }
 
 export interface GetAllServicesResponse {
@@ -70,7 +72,7 @@ export interface GetAllServicesResponse {
 }
 
 // Raw API response format (array of arrays)
-export type RawServiceResponse = [string, string][];
+export type RawServiceResponse = [string, string, string][];
 
 class MedivaApiClient {
   private baseUrl: string;
@@ -142,10 +144,13 @@ class MedivaApiClient {
     console.log("Raw API response:", rawResponse);
 
     // Transform the raw array format to our expected format
-    const services: Service[] = rawResponse.map(([scanName, scanPrice]) => ({
-      scanName,
-      scanPrice: parseFloat(scanPrice) || 0,
-    }));
+    const services: Service[] = rawResponse.map(
+      ([scanName, scanPrice, scanCategory]) => ({
+        scanName,
+        scanPrice: parseFloat(scanPrice) || 0,
+        scanCategory: scanCategory || "Scans", // Default to "Scans" if category is missing
+      })
+    );
 
     console.log("Transformed services:", services);
 

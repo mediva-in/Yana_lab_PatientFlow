@@ -1,5 +1,5 @@
 // Pricing data fetched from API
-// All services are categorized under "Scans"
+// Services are categorized based on their scanCategory from the API
 
 import { medivaApiClient, Service } from "./api-client/mediva-client";
 
@@ -17,15 +17,47 @@ export interface ScanCategory {
 export const transformApiDataToScanCategories = (
   services: Service[]
 ): Record<string, ScanCategory> => {
-  return {
-    Scans: {
-      name: "Scans",
-      tests: services.map((service) => ({
-        name: service.scanName,
-        price: service.scanPrice,
-      })),
-    },
-  };
+  // Group services by category
+  const groupedServices = services.reduce((acc, service) => {
+    const categoryName = service.scanCategory || "Scans";
+
+    if (!acc[categoryName]) {
+      acc[categoryName] = {
+        name: categoryName,
+        tests: [],
+      };
+    }
+
+    acc[categoryName].tests.push({
+      name: service.scanName,
+      price: service.scanPrice,
+    });
+
+    return acc;
+  }, {} as Record<string, ScanCategory>);
+
+  return groupedServices;
+};
+
+// Helper function to get display name with category
+export const getDisplayNameWithCategory = (
+  scanName: string,
+  scanCategories?: Record<string, ScanCategory>
+): string => {
+  // If scanCategories is provided, use it
+  if (scanCategories) {
+    for (const [categoryName, category] of Object.entries(scanCategories)) {
+      if (category && category.tests && Array.isArray(category.tests)) {
+        const test = category.tests.find((t) => t.name === scanName);
+        if (test) {
+          return `${scanName} - ${categoryName}`;
+        }
+      }
+    }
+  }
+
+  // Fallback to original name if not found or no categories provided
+  return scanName;
 };
 
 // Function to fetch scan categories from API
@@ -55,13 +87,17 @@ export const fetchScanCategories = async (): Promise<
 
 // Fallback data in case API fails
 export const fallbackScanCategories: Record<string, ScanCategory> = {
-  Scans: {
-    name: "Scans",
-    tests: [
-      { name: "Chest X-ray", price: 450 },
-      { name: "Abdomen Ultrasound", price: 2200 },
-      { name: "ECG", price: 500 },
-    ],
+  Radiology: {
+    name: "Radiology",
+    tests: [{ name: "Chest X-ray", price: 450 }],
+  },
+  Ultrasound: {
+    name: "Ultrasound",
+    tests: [{ name: "Abdomen Ultrasound", price: 2200 }],
+  },
+  Cardiology: {
+    name: "Cardiology",
+    tests: [{ name: "ECG", price: 500 }],
   },
 };
 

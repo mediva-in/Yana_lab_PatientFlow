@@ -1,5 +1,5 @@
 # Yana Labs Booking System
- 
+
 A modern booking system for medical diagnostic services built with Next.js, TypeScript, and Supabase.
 
 ## Features
@@ -149,7 +149,7 @@ The `bookings` table stores the following information:
 ### External APIs
 
 - `GET /api/patient/get-all-services`: Fetches all available scan services from the Mediva API
-  - Returns: `{ success: boolean, services: Array<{scanName: string, scanPrice: number}>, message?: string }`
+  - Returns: `{ success: boolean, services: Array<{scanName: string, scanPrice: number, scanCategory: string}>, message?: string }`
   - Used to dynamically load scan categories instead of hardcoded data
 
 ### Server Actions
@@ -174,9 +174,9 @@ The `bookings` table stores the following information:
 
 ### Scan Categories
 
-- **Scans**: All scan services are fetched from the API endpoint `/api/patient/get-all-services`
-- Services are dynamically loaded and categorized under "Scans"
-- Each service includes scan name and price information
+- **Dynamic Categories**: All scan services are fetched from the API endpoint `/api/patient/get-all-services`
+- Services are dynamically loaded and grouped by their respective categories from the API
+- Each service includes scan name, price, and category information
 - Fallback data is provided if the API is unavailable
 
 ### Time Slots

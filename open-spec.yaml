@@ -99,9 +99,9 @@ paths:
     get:
       summary: Get all available scan services
       description: |
-        Retrieves all available scan services with their names and prices.
-        Returns an array of arrays where each inner array contains [scanName, price].
-        All services are categorized under "Scans".
+        Retrieves all available scan services with their names, prices, and categories.
+        Returns an array of arrays where each inner array contains [scanName, price, category].
+        Services are grouped by their respective categories.
       operationId: getAllServices
       tags:
         - Patient Services
@@ -352,7 +352,7 @@ components:
 
     Service:
       type: object
-      description: Individual scan service with name and price
+      description: Individual scan service with name, price, and category
       properties:
         scanName:
           type: string
@@ -362,20 +362,31 @@ components:
           type: number
           description: Price of the scan service in rupees
           example: 450
+        scanCategory:
+          type: string
+          description: Category of the scan service
+          example: "Radiology"
 
     RawServiceResponse:
       type: array
-      description: Raw API response format - array of [scanName, price] arrays
+      description: Raw API response format - array of [scanName, price, category] arrays
       items:
         type: array
         items:
           - type: string
             description: Scan name
-            example: "Mukes Tax"
+            example: "Chest X-ray"
           - type: string
             description: Scan price as string
-            example: "10.0"
-      example: [["Mukes Tax", "10.0"], ["Hot Twinks", "70.0"]]
+            example: "450.0"
+          - type: string
+            description: Scan category
+            example: "Radiology"
+      example:
+        [
+          ["Chest X-ray", "450.0", "Radiology"],
+          ["Abdomen Ultrasound", "2200.0", "Ultrasound"],
+        ]
 
   securitySchemes:
     http-bearer:
