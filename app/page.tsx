@@ -14,14 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast"; // Import useToast for feedback
-// Remove the mediva client import and add direct API types
+// Import the new API-based pricing functions
 import {
   getTestPrice,
-  scanCategories as pricingData,
+  fetchScanCategories,
+  fallbackScanCategories,
+  type ScanCategory,
 } from "@/lib/pricing-data";
 import { Calendar, Clock, MapPin, Phone, Search } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type PatientType = "new" | "existing";
 type Step = 1 | 2 | 3;
@@ -42,14 +44,18 @@ interface FormData {
   selectedTime: string;
 }
 
-// Transform pricing data to match the expected format for the UI
-const scanCategories = Object.entries(pricingData).reduce(
-  (acc, [categoryName, category]) => {
-    acc[categoryName] = category.tests.map((test) => test.name);
-    return acc;
-  },
-  {} as Record<string, string[]>
-);
+// Transform scan categories to match the expected format for the UI
+const transformScanCategoriesForUI = (
+  scanCategories: Record<string, ScanCategory>
+) => {
+  return Object.entries(scanCategories).reduce(
+    (acc, [categoryName, category]) => {
+      acc[categoryName] = category.tests.map((test) => test.name);
+      return acc;
+    },
+    {} as Record<string, string[]>
+  );
+};
 
 const timeSlotsByPeriod = {
   Morning: [
@@ -173,6 +179,15 @@ export default function YanaLabsBooking() {
   const [bookingDataForDialog, setBookingDataForDialog] = useState<any>(null); // State for booking data in dialog
   const { toast } = useToast(); // Initialize toast
 
+  // State for scan categories fetched from API
+  const [scanCategories, setScanCategories] = useState<
+    Record<string, ScanCategory>
+  >({});
+  const [isLoadingScans, setIsLoadingScans] = useState(true);
+
+  // Transform scan categories to match the expected format for the UI
+  const scanCategoriesForUI = transformScanCategoriesForUI(scanCategories);
+
   const [formData, setFormData] = useState<FormData>({
     patientType: "new",
     patientName: "",
@@ -189,6 +204,27 @@ export default function YanaLabsBooking() {
     selectedTime: "",
   });
   const [expandedPeriod, setExpandedPeriod] = useState<string | null>(null);
+
+  // Fetch scan categories on component mount
+  useEffect(() => {
+    const loadScanCategories = async () => {
+      try {
+        const categories = await fetchScanCategories();
+        if (Object.keys(categories).length > 0) {
+          setScanCategories(categories);
+        } else {
+          setScanCategories(fallbackScanCategories);
+        }
+      } catch (error) {
+        console.error("Failed to load scan categories:", error);
+        setScanCategories(fallbackScanCategories);
+      } finally {
+        setIsLoadingScans(false);
+      }
+    };
+
+    loadScanCategories();
+  }, []);
 
   const updateFormData = (field: keyof FormData, value: string | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -232,7 +268,7 @@ export default function YanaLabsBooking() {
     updateFormData("selectedScans", updatedScans);
   };
 
-  const filteredScans = Object.entries(scanCategories).reduce(
+  const filteredScans = Object.entries(scanCategoriesForUI).reduce(
     (acc, [category, scans]) => {
       const filtered = scans.filter((scan) =>
         scan.toLowerCase().includes(searchTerm.toLowerCase())
@@ -862,43 +898,58 @@ export default function YanaLabsBooking() {
 
               {/* Scan Categories */}
               <div className="space-y-6">
-                {Object.entries(filteredScans).map(([category, scans]) => (
-                  <div key={category}>
-                    <h3 className="font-semibold text-gray-900 mb-3">
-                      {category}
-                    </h3>
-                    <div className="space-y-2">
-                      {scans.map((scan) => {
-                        const price = getTestPrice(scan);
-                        return (
-                          <div
-                            key={scan}
-                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                          >
-                            <div className="flex items-center space-x-3">
-                              <Checkbox
-                                id={scan}
-                                checked={formData.selectedScans.includes(scan)}
-                                onCheckedChange={() => handleScanToggle(scan)}
-                              />
-                              <Label
-                                htmlFor={scan}
-                                className="text-sm text-gray-700 font-medium"
-                              >
-                                {scan}
-                              </Label>
-                            </div>
-                            {price && (
-                              <span className="text-sm font-semibold text-green-600">
-                                ₹{price.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                {isLoadingScans ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading available scans...</p>
                   </div>
-                ))}
+                ) : Object.keys(filteredScans).length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">
+                      No scans found matching your search.
+                    </p>
+                  </div>
+                ) : (
+                  Object.entries(filteredScans).map(([category, scans]) => (
+                    <div key={category}>
+                      <h3 className="font-semibold text-gray-900 mb-3">
+                        {category}
+                      </h3>
+                      <div className="space-y-2">
+                        {scans.map((scan) => {
+                          const price = getTestPrice(scan, scanCategories);
+                          return (
+                            <div
+                              key={scan}
+                              className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                            >
+                              <div className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={scan}
+                                  checked={formData.selectedScans.includes(
+                                    scan
+                                  )}
+                                  onCheckedChange={() => handleScanToggle(scan)}
+                                />
+                                <Label
+                                  htmlFor={scan}
+                                  className="text-sm text-gray-700 font-medium"
+                                >
+                                  {scan}
+                                </Label>
+                              </div>
+                              {price && (
+                                <span className="text-sm font-semibold text-green-600">
+                                  ₹{price.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               {formData.selectedScans.length > 0 && (
@@ -908,7 +959,7 @@ export default function YanaLabsBooking() {
                   </h4>
                   <div className="space-y-2">
                     {formData.selectedScans.map((scan) => {
-                      const price = getTestPrice(scan);
+                      const price = getTestPrice(scan, scanCategories);
                       return (
                         <div
                           key={scan}
@@ -935,7 +986,7 @@ export default function YanaLabsBooking() {
                         ₹
                         {formData.selectedScans
                           .reduce((total, scan) => {
-                            const price = getTestPrice(scan);
+                            const price = getTestPrice(scan, scanCategories);
                             return total + (price || 0);
                           }, 0)
                           .toLocaleString()}
@@ -984,7 +1035,7 @@ export default function YanaLabsBooking() {
                 <CardContent>
                   <div className="space-y-2">
                     {formData.selectedScans.map((scan) => {
-                      const price = getTestPrice(scan);
+                      const price = getTestPrice(scan, scanCategories);
                       return (
                         <div
                           key={scan}
@@ -1011,7 +1062,7 @@ export default function YanaLabsBooking() {
                         ₹
                         {formData.selectedScans
                           .reduce((total, scan) => {
-                            const price = getTestPrice(scan);
+                            const price = getTestPrice(scan, scanCategories);
                             return total + (price || 0);
                           }, 0)
                           .toLocaleString()}

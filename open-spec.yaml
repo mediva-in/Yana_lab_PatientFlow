@@ -30,32 +30,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateBookingRequest'
+              $ref: "#/components/schemas/CreateBookingRequest"
       responses:
-        '201':
+        "201":
           description: Booking created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CreateBookingResponse'
-        '400':
+                $ref: "#/components/schemas/CreateBookingResponse"
+        "400":
           description: Invalid input data or validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '409':
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
           description: Time slot already booked
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/bookings/slots/{date}:
     get:
@@ -76,24 +76,48 @@ paths:
             pattern: '^\d{4}-\d{2}-\d{2}$'
             example: "2024-01-15"
       responses:
-        '200':
+        "200":
           description: Booked slots retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BookedSlotsResponse'
-        '400':
+                $ref: "#/components/schemas/BookedSlotsResponse"
+        "400":
           description: Invalid date format
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/patient/get-all-services:
+    get:
+      summary: Get all available scan services
+      description: |
+        Retrieves all available scan services with their names and prices.
+        Returns an array of arrays where each inner array contains [scanName, price].
+        All services are categorized under "Scans".
+      operationId: getAllServices
+      tags:
+        - Patient Services
+      responses:
+        "200":
+          description: Services retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RawServiceResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -174,7 +198,7 @@ components:
         selectedTime:
           type: string
           description: Selected appointment time in HH:MM format
-          pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
           example: "10:30"
 
     CreateBookingResponse:
@@ -194,7 +218,7 @@ components:
           description: Unique identifier for the created booking
           example: "booking_123456789"
         booking:
-          $ref: '#/components/schemas/Booking'
+          $ref: "#/components/schemas/Booking"
 
     BookedSlotsResponse:
       type: object
@@ -209,7 +233,7 @@ components:
           description: List of booked time slots
           items:
             type: string
-            pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$'
+            pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
           example: ["09:00", "10:30", "14:15"]
         message:
           type: string
@@ -308,6 +332,50 @@ components:
           type: object
           description: Additional error details
           additionalProperties: true
+
+    GetAllServicesResponse:
+      type: object
+      description: Response containing all available scan services
+      properties:
+        success:
+          type: boolean
+          example: true
+        services:
+          type: array
+          description: List of available scan services
+          items:
+            $ref: "#/components/schemas/Service"
+        message:
+          type: string
+          description: Optional success message
+          example: "Services retrieved successfully"
+
+    Service:
+      type: object
+      description: Individual scan service with name and price
+      properties:
+        scanName:
+          type: string
+          description: Name of the scan service
+          example: "Chest X-ray"
+        scanPrice:
+          type: number
+          description: Price of the scan service in rupees
+          example: 450
+
+    RawServiceResponse:
+      type: array
+      description: Raw API response format - array of [scanName, price] arrays
+      items:
+        type: array
+        items:
+          - type: string
+            description: Scan name
+            example: "Mukes Tax"
+          - type: string
+            description: Scan price as string
+            example: "10.0"
+      example: [["Mukes Tax", "10.0"], ["Hot Twinks", "70.0"]]
 
   securitySchemes:
     http-bearer:

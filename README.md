@@ -5,20 +5,20 @@ A modern booking system for medical diagnostic services built with Next.js, Type
 ## Features
 
 - Multi-step booking form for new and existing patients
-- Real-time form validation 
+- Real-time form validation
 - Scan selection with search functionality
-- Date and time slot selection with availability checking 
+- Date and time slot selection with availability checking
 - Prevention of double bookings with visual feedback
 - Supabase database integration
 - Responsive design
-- Toast notifications for user feedback 
+- Toast notifications for user feedback
 - Admin panel for booking management
 - Professional medical-themed favicon and branding
 - PWA-ready configuration
 
 ## Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - pnpm (recommended) or npm
 - Supabase account and project
 
@@ -146,6 +146,12 @@ The `bookings` table stores the following information:
 
 ## API Endpoints
 
+### External APIs
+
+- `GET /api/patient/get-all-services`: Fetches all available scan services from the Mediva API
+  - Returns: `{ success: boolean, services: Array<{scanName: string, scanPrice: number}>, message?: string }`
+  - Used to dynamically load scan categories instead of hardcoded data
+
 ### Server Actions
 
 - `createBooking(data)`: Creates a new booking in the database
@@ -162,20 +168,25 @@ The `bookings` table stores the following information:
 ## Features
 
 ### Patient Types
+
 - **New Patient**: Requires full information (name, age, email, gender)
 - **Existing Patient**: Only requires phone number and OTP verification
 
 ### Scan Categories
-- **X-ray**: Chest, Spine, Joint, Dental
-- **Ultrasound**: Abdomen, Pelvis, Thyroid, Pregnancy, Heart
-- **ECG**: Standard, 24-hour Holter, Stress
+
+- **Scans**: All scan services are fetched from the API endpoint `/api/patient/get-all-services`
+- Services are dynamically loaded and categorized under "Scans"
+- Each service includes scan name and price information
+- Fallback data is provided if the API is unavailable
 
 ### Time Slots
+
 - **Morning**: 09:00 - 11:45 (15-minute intervals)
 - **Afternoon**: 12:00 - 15:45 (15-minute intervals)
 - **Evening**: 16:00 - 21:45 (15-minute intervals)
 
 ### Slot Booking Logic
+
 - **Real-time Availability**: Slots are checked for availability when a date is selected
 - **Visual Feedback**: Booked slots are displayed in gray and marked as "Booked"
 - **Double Booking Prevention**: Database constraint prevents multiple bookings for the same slot
@@ -211,6 +222,7 @@ The application includes comprehensive form validation and error handling. Test 
 ### Other Platforms
 
 Ensure the following environment variables are set:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
@@ -223,4 +235,4 @@ Ensure the following environment variables are set:
 
 ## Support
 
-For issues or questions, please check the Supabase documentation or create an issue in the repository. 
+For issues or questions, please check the Supabase documentation or create an issue in the repository.
