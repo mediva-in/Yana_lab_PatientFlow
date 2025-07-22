@@ -1,5 +1,5 @@
 # Yana Labs Booking System
-
+ 
 A modern booking system for medical diagnostic services built with Next.js, TypeScript, and Supabase.
 
 ## Features
