@@ -69,39 +69,39 @@ export function BookingConfirmationDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto">
-        <DialogHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-green-600" />
+      <DialogContent className="max-w-md mx-auto max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="text-center flex-shrink-0 pb-4">
+          <div className="flex justify-center mb-3">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
           </div>
-          <DialogTitle className="text-xl font-semibold text-gray-900">
+          <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900">
             Booking Confirmed!
           </DialogTitle>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-xs sm:text-sm text-gray-600 mt-1 sm:mt-2">
             Your appointment has been successfully scheduled
           </p>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 pr-1">
           {/* Booking ID */}
           {bookingData.bookingId && (
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
               <p className="text-xs text-gray-500 mb-1">Booking ID</p>
-              <p className="text-sm font-mono text-gray-900">
+              <p className="text-xs sm:text-sm font-mono text-gray-900 break-all">
                 {bookingData.bookingId}
               </p>
             </div>
           )}
 
           {/* Patient Information */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <User className="w-4 h-4" />
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="font-medium text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+              <User className="w-3 h-3 sm:w-4 sm:h-4" />
               Patient Information
             </h3>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Type:</span>
                 <Badge
@@ -119,7 +119,7 @@ export function BookingConfirmationDialog({
                 <>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Name:</span>
-                    <span className="font-medium">
+                    <span className="font-medium text-right max-w-[60%] break-words">
                       {bookingData.patientName}
                     </span>
                   </div>
@@ -137,12 +137,14 @@ export function BookingConfirmationDialog({
               )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Phone:</span>
-                <span className="font-medium">{bookingData.phoneNumber}</span>
+                <span className="font-medium text-right break-all">
+                  {bookingData.phoneNumber}
+                </span>
               </div>
               {bookingData.patientType === "new" && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Email:</span>
-                  <span className="font-medium">
+                  <span className="font-medium text-right max-w-[60%] break-all">
                     {bookingData.emailAddress}
                   </span>
                 </div>
@@ -151,15 +153,15 @@ export function BookingConfirmationDialog({
           </div>
 
           {/* Appointment Details */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="font-medium text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
               Appointment Details
             </h3>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Date:</span>
-                <span className="font-medium">
+                <span className="font-medium text-right max-w-[60%] break-words">
                   {formatDate(bookingData.selectedDate)}
                 </span>
               </div>
@@ -173,21 +175,23 @@ export function BookingConfirmationDialog({
           </div>
 
           {/* Selected Scans */}
-          <div className="space-y-3">
-            <h3 className="font-medium text-gray-900">Selected Scans</h3>
-            <div className="space-y-2">
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="font-medium text-gray-900 text-sm sm:text-base">
+              Selected Scans
+            </h3>
+            <div className="space-y-1 sm:space-y-2">
               {bookingData.selectedScans.map((scan) => {
-                const price = getTestPrice(scan, scanCategories);
+                const price = getTestPrice(scan, scanCategories || {});
                 return (
                   <div
                     key={scan}
                     className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg"
                   >
-                    <span className="text-sm font-medium text-green-800">
-                      {getDisplayNameWithCategory(scan, scanCategories)}
+                    <span className="text-xs sm:text-sm font-medium text-green-800 flex-1 pr-2">
+                      {getDisplayNameWithCategory(scan, scanCategories || {})}
                     </span>
                     {price && (
-                      <span className="text-sm font-semibold text-green-600">
+                      <span className="text-xs sm:text-sm font-semibold text-green-600 flex-shrink-0">
                         ₹{price.toLocaleString()}
                       </span>
                     )}
@@ -197,14 +201,14 @@ export function BookingConfirmationDialog({
             </div>
             <div className="pt-2 border-t border-gray-200">
               <div className="flex justify-between items-center">
-                <span className="font-semibold text-gray-900">
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">
                   Total Amount:
                 </span>
-                <span className="font-bold text-lg text-green-600">
+                <span className="font-bold text-base sm:text-lg text-green-600">
                   ₹
                   {bookingData.selectedScans
                     .reduce((total, scan) => {
-                      const price = getTestPrice(scan, scanCategories);
+                      const price = getTestPrice(scan, scanCategories || {});
                       return total + (price || 0);
                     }, 0)
                     .toLocaleString()}
@@ -214,9 +218,9 @@ export function BookingConfirmationDialog({
           </div>
 
           {/* Contact Information */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <h4 className="font-medium text-gray-900 text-sm mb-2 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
+          <div className="bg-gray-50 rounded-lg p-2 sm:p-3">
+            <h4 className="font-medium text-gray-900 text-xs sm:text-sm mb-2 flex items-center gap-2">
+              <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
               Visit Us
             </h4>
             <div className="text-xs text-gray-600 space-y-1">
@@ -236,7 +240,7 @@ export function BookingConfirmationDialog({
           </div>
         </div>
 
-        <div className="flex gap-3 pt-4">
+        <div className="flex gap-2 sm:gap-3 pt-3 sm:pt-4 flex-shrink-0">
           <Button
             onClick={() => {
               onClose();
@@ -251,7 +255,7 @@ export function BookingConfirmationDialog({
               // Optionally redirect to home or refresh
               window.location.reload();
             }}
-            className="flex-1 bg-green-600 hover:bg-green-700"
+            className="flex-1 bg-green-600 hover:bg-green-700 text-xs sm:text-sm py-2"
           >
             Done
           </Button>
@@ -287,7 +291,7 @@ export function BookingConfirmationDialog({
               window.open(calendarUrl, "_blank");
             }}
             variant="outline"
-            className="flex-1"
+            className="flex-1 text-xs sm:text-sm py-2"
           >
             Add to Calendar
           </Button>
